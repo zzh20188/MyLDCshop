@@ -75,6 +75,8 @@ export default async function Home() {
         ALTER TABLE products ADD COLUMN IF NOT EXISTS is_hot BOOLEAN DEFAULT FALSE;
         ALTER TABLE cards ADD COLUMN IF NOT EXISTS reserved_order_id TEXT;
         ALTER TABLE cards ADD COLUMN IF NOT EXISTS reserved_at TIMESTAMP;
+        ALTER TABLE cards ALTER COLUMN is_used SET DEFAULT FALSE;
+        UPDATE cards SET is_used = FALSE WHERE is_used IS NULL;
         CREATE UNIQUE INDEX IF NOT EXISTS cards_product_id_card_key_uq ON cards(product_id, card_key);
         -- Settings table for announcements
         CREATE TABLE IF NOT EXISTS settings (

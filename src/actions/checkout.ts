@@ -24,12 +24,66 @@ export async function createOrder(productId: string, email?: string) {
         // Best effort cleanup
     }
 
-    // 2. Check Stock
-    const stockResult = await db.select({ count: sql<number>`count(*)::int` })
-        .from(cards)
-        .where(sql`${cards.productId} = ${productId} AND ${cards.isUsed} = false AND (${cards.reservedAt} IS NULL OR ${cards.reservedAt} < NOW() - INTERVAL '1 minute')`)
+    const ensureCardsReservationColumns = async () => {
+        await db.execute(sql`
+            ALTER TABLE cards ADD COLUMN IF NOT EXISTS reserved_order_id TEXT;
+            ALTER TABLE cards ADD COLUMN IF NOT EXISTS reserved_at TIMESTAMP;
+        `);
+    }
 
-    const stock = stockResult[0]?.count || 0
+    const ensureCardsIsUsedDefaults = async () => {
+        // Best effort: handle legacy schemas where is_used has no default and existing rows are NULL
+        await db.execute(sql`
+            ALTER TABLE cards ALTER COLUMN is_used SET DEFAULT FALSE;
+            UPDATE cards SET is_used = FALSE WHERE is_used IS NULL;
+        `);
+    }
+
+    const getAvailableStock = async () => {
+        const result = await db.select({ count: sql<number>`count(*)::int` })
+            .from(cards)
+            .where(sql`
+                ${cards.productId} = ${productId}
+                AND (COALESCE(${cards.isUsed}, false) = false)
+                AND (${cards.reservedAt} IS NULL OR ${cards.reservedAt} < NOW() - INTERVAL '1 minute')
+            `)
+        return result[0]?.count || 0
+    }
+
+    // 2. Check Stock
+    let stock = 0
+    try {
+        stock = await getAvailableStock()
+    } catch (error: any) {
+        const errorString = JSON.stringify(error)
+        const isMissingColumn =
+            error?.message?.includes('reserved_order_id') ||
+            error?.message?.includes('reserved_at') ||
+            errorString.includes('42703')
+
+        if (isMissingColumn) {
+            await ensureCardsReservationColumns()
+            stock = await getAvailableStock()
+        } else {
+            throw error
+        }
+    }
+
+    if (stock <= 0) {
+        // If legacy schema inserted NULL is_used, try backfill once and re-check.
+        try {
+            const nullUsed = await db.select({ count: sql<number>`count(*)::int` })
+                .from(cards)
+                .where(sql`${cards.productId} = ${productId} AND ${cards.isUsed} IS NULL`)
+            if ((nullUsed[0]?.count || 0) > 0) {
+                await ensureCardsIsUsedDefaults()
+                stock = await getAvailableStock()
+            }
+        } catch {
+            // ignore
+        }
+    }
+
     if (stock <= 0) return { success: false, error: 'buy.outOfStock' }
 
     // 3. Check Purchase Limit
@@ -73,7 +127,7 @@ export async function createOrder(productId: string, email?: string) {
                     SELECT id
                     FROM cards
                     WHERE product_id = ${productId}
-                      AND is_used = false
+                      AND COALESCE(is_used, false) = false
                       AND (reserved_at IS NULL OR reserved_at < NOW() - INTERVAL '1 minute')
                     LIMIT 1
                     FOR UPDATE SKIP LOCKED

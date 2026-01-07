@@ -15,7 +15,7 @@ export default async function CardsPage({ params }: { params: Promise<{ id: stri
     try {
         unusedCards = await db.select()
             .from(cards)
-            .where(sql`${cards.productId} = ${id} AND ${cards.isUsed} = false AND (${cards.reservedAt} IS NULL OR ${cards.reservedAt} < NOW() - INTERVAL '1 minute')`)
+            .where(sql`${cards.productId} = ${id} AND COALESCE(${cards.isUsed}, false) = false AND (${cards.reservedAt} IS NULL OR ${cards.reservedAt} < NOW() - INTERVAL '1 minute')`)
             .orderBy(desc(cards.createdAt))
     } catch (error: any) {
         const errorString = JSON.stringify(error)
@@ -45,7 +45,7 @@ export default async function CardsPage({ params }: { params: Promise<{ id: stri
 
         unusedCards = await db.select()
             .from(cards)
-            .where(sql`${cards.productId} = ${id} AND ${cards.isUsed} = false AND (${cards.reservedAt} IS NULL OR ${cards.reservedAt} < NOW() - INTERVAL '1 minute')`)
+            .where(sql`${cards.productId} = ${id} AND COALESCE(${cards.isUsed}, false) = false AND (${cards.reservedAt} IS NULL OR ${cards.reservedAt} < NOW() - INTERVAL '1 minute')`)
             .orderBy(desc(cards.createdAt))
     }
 

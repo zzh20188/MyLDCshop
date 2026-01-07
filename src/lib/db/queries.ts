@@ -36,8 +36,8 @@ export async function getProducts() {
             isActive: products.isActive,
             sortOrder: products.sortOrder,
             purchaseLimit: products.purchaseLimit,
-            stock: sql<number>`count(case when ${cards.isUsed} = false then 1 end)::int`,
-            sold: sql<number>`count(case when ${cards.isUsed} = true then 1 end)::int`
+            stock: sql<number>`count(case when COALESCE(${cards.isUsed}, false) = false then 1 end)::int`,
+            sold: sql<number>`count(case when COALESCE(${cards.isUsed}, false) = true then 1 end)::int`
         })
             .from(products)
             .leftJoin(cards, eq(products.id, cards.productId))
@@ -59,8 +59,8 @@ export async function getActiveProducts() {
             category: products.category,
             isHot: products.isHot,
             purchaseLimit: products.purchaseLimit,
-            stock: sql<number>`count(case when ${cards.isUsed} = false then 1 end)::int`,
-            sold: sql<number>`count(case when ${cards.isUsed} = true then 1 end)::int`
+            stock: sql<number>`count(case when COALESCE(${cards.isUsed}, false) = false then 1 end)::int`,
+            sold: sql<number>`count(case when COALESCE(${cards.isUsed}, false) = true then 1 end)::int`
         })
             .from(products)
             .leftJoin(cards, eq(products.id, cards.productId))
@@ -82,7 +82,7 @@ export async function getProduct(id: string) {
             category: products.category,
             isHot: products.isHot,
             purchaseLimit: products.purchaseLimit,
-            stock: sql<number>`count(case when ${cards.isUsed} = false then 1 end)::int`
+            stock: sql<number>`count(case when COALESCE(${cards.isUsed}, false) = false then 1 end)::int`
         })
             .from(products)
             .leftJoin(cards, eq(products.id, cards.productId))
@@ -230,8 +230,8 @@ export async function searchActiveProducts(params: {
             category: products.category,
             isHot: products.isHot,
             purchaseLimit: products.purchaseLimit,
-            stock: sql<number>`count(case when ${cards.isUsed} = false then 1 end)::int`,
-            sold: sql<number>`count(case when ${cards.isUsed} = true then 1 end)::int`
+            stock: sql<number>`count(case when COALESCE(${cards.isUsed}, false) = false then 1 end)::int`,
+            sold: sql<number>`count(case when COALESCE(${cards.isUsed}, false) = true then 1 end)::int`
         })
             .from(products)
             .leftJoin(cards, eq(products.id, cards.productId))
@@ -518,7 +518,7 @@ export async function cancelExpiredOrders(filters: { productId?: string; userId?
                     await tx.execute(sql`
                         UPDATE cards
                         SET reserved_order_id = NULL, reserved_at = NULL
-                        WHERE reserved_order_id = ${expiredOrderId} AND is_used = false
+                        WHERE reserved_order_id = ${expiredOrderId} AND COALESCE(is_used, false) = false
                     `);
                 } catch (error: any) {
                     if (!isMissingTableOrColumn(error)) throw error;

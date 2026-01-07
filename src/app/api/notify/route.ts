@@ -66,7 +66,7 @@ async function processNotify(params: Record<string, any>) {
                                 used_at = NOW(),
                                 reserved_order_id = NULL,
                                 reserved_at = NULL
-                            WHERE reserved_order_id = ${orderId} AND is_used = false
+                            WHERE reserved_order_id = ${orderId} AND COALESCE(is_used, false) = false
                             RETURNING card_key
                         `);
 
@@ -96,7 +96,7 @@ async function processNotify(params: Record<string, any>) {
                                     SELECT id
                                     FROM cards
                                     WHERE product_id = ${order.productId}
-                                      AND is_used = false
+                                      AND COALESCE(is_used, false) = false
                                       AND (reserved_at IS NULL OR reserved_at < NOW() - INTERVAL '1 minute')
                                     LIMIT 1
                                     FOR UPDATE SKIP LOCKED
@@ -112,7 +112,7 @@ async function processNotify(params: Record<string, any>) {
                                 WHERE id = (
                                     SELECT id
                                     FROM cards
-                                    WHERE product_id = ${order.productId} AND is_used = false
+                                    WHERE product_id = ${order.productId} AND COALESCE(is_used, false) = false
                                     LIMIT 1
                                     FOR UPDATE SKIP LOCKED
                                 )
