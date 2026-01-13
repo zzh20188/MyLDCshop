@@ -9,14 +9,6 @@
         "directory": ".open-next/assets",
         "binding": "ASSETS"
     },
-    "d1_databases": [
-        {
-            "binding": "DB",
-            "database_name": "ldc-shop-next",
-            "database_id": "DB_ID_PLACEHOLDER",
-            "migrations_dir": "src/lib/db/migrations"
-        }
-    ],
     "observability": {
         "enabled": true
     },
