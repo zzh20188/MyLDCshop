@@ -2,7 +2,7 @@
 
 import { db } from "@/lib/db"
 import { sql } from "drizzle-orm"
-import { revalidatePath } from "next/cache"
+import { revalidatePath, revalidateTag } from "next/cache"
 import { checkAdmin } from "@/actions/admin"
 
 async function executeStatement(statement: string) {
@@ -122,6 +122,10 @@ export async function importData(formData: FormData) {
         }
 
         revalidatePath('/admin')
+        revalidateTag('home:products')
+        revalidateTag('home:ratings')
+        revalidateTag('home:categories')
+        revalidateTag('home:announcement')
         return { success: true, count: successCount, errors: errorCount }
     } catch (e: any) {
         return { success: false, error: e.message }

@@ -1,6 +1,6 @@
 import { db } from "./index";
 import { products, cards, orders, settings, reviews, loginUsers, categories } from "./schema";
-import { eq, sql, desc, and, asc, gte, or } from "drizzle-orm";
+import { eq, sql, desc, and, asc, gte, or, inArray } from "drizzle-orm";
 
 // Database initialization state
 let dbInitialized = false;
@@ -549,6 +549,33 @@ export async function getProductRating(productId: string): Promise<{ average: nu
         average: result[0]?.avg ?? 0,
         count: result[0]?.count ?? 0
     };
+}
+
+export async function getProductRatings(productIds: string[]): Promise<Map<string, { average: number; count: number }>> {
+    const map = new Map<string, { average: number; count: number }>();
+    if (!productIds.length) return map;
+
+    try {
+        const rows = await db.select({
+            productId: reviews.productId,
+            avg: sql<number>`COALESCE(AVG(${reviews.rating}), 0)`,
+            count: sql<number>`COUNT(*)`
+        })
+            .from(reviews)
+            .where(inArray(reviews.productId, productIds))
+            .groupBy(reviews.productId);
+
+        for (const row of rows) {
+            map.set(row.productId, {
+                average: row.avg ?? 0,
+                count: row.count ?? 0
+            });
+        }
+    } catch (error: any) {
+        if (!isMissingTable(error)) throw error;
+    }
+
+    return map;
 }
 
 export async function createReview(data: {

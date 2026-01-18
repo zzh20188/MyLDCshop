@@ -5,7 +5,7 @@ import { createReview } from '@/lib/db/queries'
 import { db } from '@/lib/db'
 import { orders } from '@/lib/db/schema'
 import { eq, sql } from 'drizzle-orm'
-import { revalidatePath } from 'next/cache'
+import { revalidatePath, revalidateTag } from 'next/cache'
 
 export async function submitReview(
     productId: string,
@@ -92,6 +92,8 @@ export async function submitReview(
 
         revalidatePath(`/buy/${productId}`)
         revalidatePath(`/order/${orderId}`)
+        revalidatePath(`/`)
+        revalidateTag('home:ratings')
 
         return { success: true }
     } catch (error) {

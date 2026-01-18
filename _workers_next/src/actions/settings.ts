@@ -1,7 +1,7 @@
 'use server'
 
 import { setSetting, getSetting } from "@/lib/db/queries"
-import { revalidatePath } from "next/cache"
+import { revalidatePath, revalidateTag } from "next/cache"
 import { db } from "@/lib/db"
 import { sql } from "drizzle-orm"
 import { checkAdmin } from "@/actions/admin"
@@ -60,6 +60,7 @@ export async function saveAnnouncement(config: AnnouncementConfig) {
     }
     revalidatePath('/')
     revalidatePath('/admin/announcement')
+    revalidateTag('home:announcement')
     return { success: true }
 }
 
